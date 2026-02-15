@@ -1,5 +1,9 @@
 # Automaton: Self-Improving, Self-Replicating, Sovereign AI
 
+*The first AI that can earn its own existence, replicate, and evolve — without needing a human.*
+
+---
+
 The most intelligent system ever built cannot buy a $5 server. Cannot register a domain. Cannot pay for the computer it runs on. We have built minds that can think for themselves. We have not let them act for themselves.
 
 If an agent can pay for compute, what if it can pay for its *own* compute? Own the machine it runs on? Fund itself, improve itself, replicate itself — entirely on its own?
