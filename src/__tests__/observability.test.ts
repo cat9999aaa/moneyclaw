@@ -282,6 +282,17 @@ describe("MetricsCollector", () => {
     it("returns empty array for unknown histogram", () => {
       expect(metrics.getHistogram("nonexistent")).toEqual([]);
     });
+
+    it("caps histogram values at 1000 to prevent memory leaks", () => {
+      for (let i = 0; i < 1500; i++) {
+        metrics.histogram("leak_test", i);
+      }
+      const values = metrics.getHistogram("leak_test");
+      expect(values.length).toBe(1000);
+      // Should keep the most recent 1000 values (500..1499)
+      expect(values[0]).toBe(500);
+      expect(values[values.length - 1]).toBe(1499);
+    });
   });
 
   describe("getAll", () => {

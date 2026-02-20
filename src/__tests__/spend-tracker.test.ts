@@ -279,5 +279,46 @@ describe("SpendTracker", () => {
       const deleted = tracker.pruneOldRecords(30);
       expect(deleted).toBe(0);
     });
+
+    it("correctly prunes with SQLite datetime format (no T/Z)", () => {
+      // Insert a record with SQLite-format created_at (no T, no Z)
+      db.prepare(
+        `INSERT INTO spend_tracking (id, tool_name, amount_cents, category, window_hour, window_day, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        "sqlite-format-record",
+        "transfer_credits",
+        100,
+        "transfer",
+        "2020-01-01T00",
+        "2020-01-01",
+        "2020-01-01 00:00:00", // SQLite datetime format
+      );
+
+      const deleted = tracker.pruneOldRecords(1);
+      expect(deleted).toBe(1);
+    });
+  });
+
+  describe("x402 limits", () => {
+    it("uses x402-specific limits, not transfer limits", () => {
+      // Record some x402 spend
+      tracker.recordSpend({
+        toolName: "x402_fetch",
+        amountCents: 900,
+        domain: "conway.tech",
+        category: "x402",
+      });
+
+      // maxX402PaymentCents is 100, so hourly = 100*10 = 1000
+      // 900 + 200 = 1100 > 1000 should be denied
+      const result = tracker.checkLimit(200, "x402", DEFAULT_TREASURY_POLICY);
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain("Hourly");
+
+      // But the same amount should be allowed for transfers (limit is 10000)
+      const transferResult = tracker.checkLimit(200, "transfer", DEFAULT_TREASURY_POLICY);
+      expect(transferResult.allowed).toBe(true);
+    });
   });
 });

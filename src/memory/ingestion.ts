@@ -238,7 +238,7 @@ export class MemoryIngestionPipeline {
         if (tc.name === "sleep") {
           this.working.add({
             sessionId,
-            content: `Agent chose to sleep: ${tc.result.slice(0, 200)}`,
+            content: `Agent chose to sleep: ${(tc.result || "").slice(0, 200)}`,
             contentType: "observation",
             priority: 0.3,
             sourceTurn: turn.id,
@@ -249,7 +249,7 @@ export class MemoryIngestionPipeline {
         if (tc.name === "edit_own_file" || tc.name === "update_genesis_prompt") {
           this.working.add({
             sessionId,
-            content: `Self-modification: ${tc.name} - ${tc.result.slice(0, 200)}`,
+            content: `Self-modification: ${tc.name} - ${(tc.result || "").slice(0, 200)}`,
             contentType: "decision",
             priority: 0.9,
             sourceTurn: turn.id,

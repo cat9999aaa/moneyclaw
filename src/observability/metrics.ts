@@ -14,6 +14,9 @@ function labelKey(name: string, labels?: Record<string, string>): string {
   return `${name}{${sorted}}`;
 }
 
+// Maximum number of values to retain per histogram key
+const HISTOGRAM_MAX_VALUES = 1000;
+
 export class MetricsCollector {
   private counters = new Map<string, number>();
   private gauges = new Map<string, number>();
@@ -44,6 +47,10 @@ export class MetricsCollector {
       const key = labelKey(name, labels);
       const existing = this.histogramValues.get(key) ?? [];
       existing.push(value);
+      // Prevent unbounded memory growth by keeping only the most recent values
+      if (existing.length > HISTOGRAM_MAX_VALUES) {
+        existing.splice(0, existing.length - HISTOGRAM_MAX_VALUES);
+      }
       this.histogramValues.set(key, existing);
       this.nameStore.set(key, name);
       this.labelStore.set(key, labels ?? {});

@@ -95,9 +95,10 @@ export class SpendTracker implements SpendTrackerInterface {
       limitHourly = limits.maxHourlyTransferCents;
       limitDaily = limits.maxDailyTransferCents;
     } else if (category === "x402") {
-      // x402 uses the same hourly/daily structure but primary limit is per-payment
-      limitHourly = limits.maxHourlyTransferCents;
-      limitDaily = limits.maxDailyTransferCents;
+      // x402 payments have their own per-payment cap; use a reasonable
+      // hourly/daily envelope derived from the per-payment maximum
+      limitHourly = limits.maxX402PaymentCents * 10;
+      limitDaily = limits.maxX402PaymentCents * 50;
     } else {
       limitHourly = limits.maxInferenceDailyCents; // fallback
       limitDaily = limits.maxInferenceDailyCents;
@@ -137,7 +138,9 @@ export class SpendTracker implements SpendTrackerInterface {
   pruneOldRecords(retentionDays: number): number {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - retentionDays);
-    const cutoffStr = cutoff.toISOString();
+    // SQLite datetime('now') stores as 'YYYY-MM-DD HH:MM:SS' (no T, no Z)
+    // Convert to the same format for correct string comparison
+    const cutoffStr = cutoff.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, "");
     return pruneSpendRecords(this.db, cutoffStr);
   }
 }
