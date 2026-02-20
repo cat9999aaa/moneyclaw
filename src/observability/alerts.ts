@@ -27,10 +27,10 @@ export function createDefaultAlertRules(): AlertRule[] {
       cooldownMs: 15 * 60 * 1000, // 15 min
       condition: (metrics: MetricSnapshot) => {
         const failures = metrics.counters.get("heartbeat_task_failures_total") ?? 0;
-        const total = (metrics.counters.get("heartbeat_task_failures_total") ?? 0) +
-          (metrics.counters.get("heartbeat_task_duration_ms") ? 1 : 0);
+        const successes = metrics.counters.get("heartbeat_task_successes_total") ?? 0;
+        const total = failures + successes;
         if (total === 0) return false;
-        return failures / Math.max(total, 1) > 0.2;
+        return failures / total > 0.2;
       },
     },
     {
@@ -39,9 +39,10 @@ export function createDefaultAlertRules(): AlertRule[] {
       message: "Policy deny rate exceeds 50%",
       cooldownMs: 15 * 60 * 1000, // 15 min
       condition: (metrics: MetricSnapshot) => {
-        const denies = metrics.counters.get("policy_decisions_total") ?? 0;
-        // If no policy decisions tracked, skip
-        return denies > 10;
+        const denies = metrics.counters.get("policy_denies_total") ?? 0;
+        const total = metrics.counters.get("policy_decisions_total") ?? 0;
+        if (total < 10) return false; // Need minimum sample size
+        return denies / total > 0.5;
       },
     },
     {
@@ -72,7 +73,7 @@ export function createDefaultAlertRules(): AlertRule[] {
       message: "Child has been unhealthy for extended period",
       cooldownMs: 30 * 60 * 1000, // 30 min
       condition: (metrics: MetricSnapshot) => {
-        const unhealthy = metrics.gauges.get("child_count") ?? 0;
+        const unhealthy = metrics.gauges.get("unhealthy_child_count") ?? 0;
         return unhealthy > 0;
       },
     },
@@ -82,8 +83,14 @@ export function createDefaultAlertRules(): AlertRule[] {
       message: "No successful turns in the last hour",
       cooldownMs: 60 * 60 * 1000, // 60 min
       condition: (metrics: MetricSnapshot) => {
-        const turns = metrics.counters.get("turns_total") ?? 0;
-        return turns === 0;
+        const turnsLastHour = metrics.gauges.get("turns_last_hour") ?? -1;
+        // Use windowed gauge if available; fall back to cumulative counter only
+        // when the gauge hasn't been set yet (-1 sentinel).
+        if (turnsLastHour >= 0) return turnsLastHour === 0;
+        const turnsTotal = metrics.counters.get("turns_total") ?? -1;
+        // If turns_total was never set, assume we just started — don't alert
+        if (turnsTotal < 0) return false;
+        return turnsTotal === 0;
       },
     },
   ];

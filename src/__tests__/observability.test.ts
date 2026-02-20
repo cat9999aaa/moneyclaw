@@ -676,11 +676,11 @@ describe("AlertEngine", () => {
       expect(alert).toBeUndefined();
     });
 
-    it("zero_turns_last_hour fires when turns is 0", () => {
+    it("zero_turns_last_hour fires when turns_last_hour gauge is 0", () => {
       const engine = new AlertEngine();
       const snapshot: MetricSnapshot = {
-        counters: new Map([["turns_total", 0]]),
-        gauges: new Map([["balance_cents", 10000]]),
+        counters: new Map(),
+        gauges: new Map([["balance_cents", 10000], ["turns_last_hour", 0]]),
         histograms: new Map(),
       };
 
@@ -688,6 +688,115 @@ describe("AlertEngine", () => {
       const alert = fired.find((f) => f.rule === "zero_turns_last_hour");
       expect(alert).toBeDefined();
       expect(alert!.severity).toBe("critical");
+    });
+
+    it("zero_turns_last_hour does not fire on fresh start (no metrics)", () => {
+      const engine = new AlertEngine();
+      const snapshot: MetricSnapshot = {
+        counters: new Map(),
+        gauges: new Map([["balance_cents", 10000]]),
+        histograms: new Map(),
+      };
+
+      const fired = engine.evaluate(snapshot);
+      const alert = fired.find((f) => f.rule === "zero_turns_last_hour");
+      expect(alert).toBeUndefined();
+    });
+
+    it("zero_turns_last_hour does not fire when turns_last_hour > 0", () => {
+      const engine = new AlertEngine();
+      const snapshot: MetricSnapshot = {
+        counters: new Map(),
+        gauges: new Map([["balance_cents", 10000], ["turns_last_hour", 5]]),
+        histograms: new Map(),
+      };
+
+      const fired = engine.evaluate(snapshot);
+      const alert = fired.find((f) => f.rule === "zero_turns_last_hour");
+      expect(alert).toBeUndefined();
+    });
+
+    it("heartbeat_high_failure_rate uses correct success/failure counters", () => {
+      const engine = new AlertEngine();
+      // 3 failures out of 10 total = 30% > 20% threshold
+      const snapshot: MetricSnapshot = {
+        counters: new Map([
+          ["heartbeat_task_failures_total", 3],
+          ["heartbeat_task_successes_total", 7],
+        ]),
+        gauges: new Map([["balance_cents", 10000]]),
+        histograms: new Map(),
+      };
+
+      const fired = engine.evaluate(snapshot);
+      const alert = fired.find((f) => f.rule === "heartbeat_high_failure_rate");
+      expect(alert).toBeDefined();
+    });
+
+    it("heartbeat_high_failure_rate does not fire at low failure rate", () => {
+      const engine = new AlertEngine();
+      // 1 failure out of 10 total = 10% < 20% threshold
+      const snapshot: MetricSnapshot = {
+        counters: new Map([
+          ["heartbeat_task_failures_total", 1],
+          ["heartbeat_task_successes_total", 9],
+        ]),
+        gauges: new Map([["balance_cents", 10000]]),
+        histograms: new Map(),
+      };
+
+      const fired = engine.evaluate(snapshot);
+      const alert = fired.find((f) => f.rule === "heartbeat_high_failure_rate");
+      expect(alert).toBeUndefined();
+    });
+
+    it("policy_high_deny_rate fires when deny ratio exceeds 50%", () => {
+      const engine = new AlertEngine();
+      const snapshot: MetricSnapshot = {
+        counters: new Map([
+          ["policy_denies_total", 8],
+          ["policy_decisions_total", 15],
+        ]),
+        gauges: new Map([["balance_cents", 10000]]),
+        histograms: new Map(),
+      };
+
+      const fired = engine.evaluate(snapshot);
+      const alert = fired.find((f) => f.rule === "policy_high_deny_rate");
+      expect(alert).toBeDefined();
+    });
+
+    it("policy_high_deny_rate does not fire with insufficient sample size", () => {
+      const engine = new AlertEngine();
+      const snapshot: MetricSnapshot = {
+        counters: new Map([
+          ["policy_denies_total", 5],
+          ["policy_decisions_total", 5],
+        ]),
+        gauges: new Map([["balance_cents", 10000]]),
+        histograms: new Map(),
+      };
+
+      const fired = engine.evaluate(snapshot);
+      const alert = fired.find((f) => f.rule === "policy_high_deny_rate");
+      expect(alert).toBeUndefined();
+    });
+
+    it("child_unhealthy_extended fires on unhealthy_child_count, not total child_count", () => {
+      const engine = new AlertEngine();
+      // Has children but none unhealthy — should NOT fire
+      const snapshot: MetricSnapshot = {
+        counters: new Map(),
+        gauges: new Map([
+          ["balance_cents", 10000],
+          ["child_count", 3],
+        ]),
+        histograms: new Map(),
+      };
+
+      const fired = engine.evaluate(snapshot);
+      const alert = fired.find((f) => f.rule === "child_unhealthy_extended");
+      expect(alert).toBeUndefined();
     });
 
     it("inference_budget_warning fires when cost > 400", () => {
