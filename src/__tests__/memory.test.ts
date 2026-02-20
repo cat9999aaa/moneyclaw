@@ -258,7 +258,8 @@ describe("EpisodicMemoryManager", () => {
     expect(ep.prune(0)).toBe(0);
     expect(ep.prune(-30)).toBe(0);
     expect(ep.getRecent("s1")).toHaveLength(1);
-    
+  });
+  
   it("should escape SQL LIKE wildcards in search queries", () => {
     ep.record({ sessionId: "s1", eventType: "test", summary: "100% complete" });
     ep.record({ sessionId: "s1", eventType: "test", summary: "file_name test" });
