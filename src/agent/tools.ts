@@ -2380,7 +2380,7 @@ function createInstalledToolExecutor(
     const command = tool.config?.command as string | undefined;
     if (command) {
       const result = await ctx.conway.exec(
-        `${command} ${JSON.stringify(args)}`,
+        `${command} ${escapeShellArg(JSON.stringify(args))}`,
         30000,
       );
       return `exit_code: ${result.exitCode}\nstdout: ${result.stdout}\nstderr: ${result.stderr}`;
@@ -2517,4 +2517,9 @@ export async function executeTool(
       error: err.message || String(err),
     };
   }
+}
+
+/** Escape a string for safe shell interpolation. */
+function escapeShellArg(arg: string): string {
+  return `'${arg.replace(/'/g, "'\\''")}'`;
 }
