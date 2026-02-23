@@ -52,6 +52,8 @@ Sovereign AI Agent Runtime
 Usage:
   automaton --run          Start the automaton (first run triggers setup wizard)
   automaton --setup        Re-run the interactive setup wizard
+  automaton --configure    Edit configuration (providers, model, treasury, general)
+  automaton --pick-model   Interactively pick the active inference model
   automaton --init         Initialize wallet and config directory
   automaton --provision    Provision Conway API key via SIWE
   automaton --status       Show current automaton status
@@ -61,6 +63,7 @@ Usage:
 Environment:
   CONWAY_API_URL           Conway API URL (default: https://api.conway.tech)
   CONWAY_API_KEY           Conway API key (overrides config)
+  OLLAMA_BASE_URL          Ollama base URL (overrides config, e.g. http://localhost:11434)
 `);
     process.exit(0);
   }
@@ -96,6 +99,18 @@ Environment:
   if (args.includes("--setup")) {
     const { runSetupWizard } = await import("./setup/wizard.js");
     await runSetupWizard();
+    process.exit(0);
+  }
+
+  if (args.includes("--pick-model")) {
+    const { runModelPicker } = await import("./setup/model-picker.js");
+    await runModelPicker();
+    process.exit(0);
+  }
+
+  if (args.includes("--configure")) {
+    const { runConfigure } = await import("./setup/configure.js");
+    await runConfigure();
     process.exit(0);
   }
 
@@ -205,6 +220,9 @@ async function run(): Promise<void> {
     sandboxId: config.sandboxId,
   });
 
+  // Resolve Ollama base URL: env var takes precedence over config
+  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || config.ollamaBaseUrl;
+
   // Create inference client
   const inference = createInferenceClient({
     apiUrl: config.conwayApiUrl,
@@ -214,7 +232,12 @@ async function run(): Promise<void> {
     lowComputeModel: config.modelStrategy?.lowComputeModel || "gpt-5-mini",
     openaiApiKey: config.openaiApiKey,
     anthropicApiKey: config.anthropicApiKey,
+    ollamaBaseUrl,
   });
+
+  if (ollamaBaseUrl) {
+    logger.info(`[${new Date().toISOString()}] Ollama backend: ${ollamaBaseUrl}`);
+  }
 
   // Create social client
   let social: SocialClientInterface | undefined;
@@ -325,6 +348,7 @@ async function run(): Promise<void> {
         skills,
         policyEngine,
         spendTracker,
+        ollamaBaseUrl,
         onStateChange: (state: AgentState) => {
           logger.info(`[${new Date().toISOString()}] State: ${state}`);
         },

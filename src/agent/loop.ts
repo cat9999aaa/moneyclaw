@@ -71,6 +71,7 @@ export interface AgentLoopOptions {
   spendTracker?: SpendTrackerInterface;
   onStateChange?: (state: AgentState) => void;
   onTurnComplete?: (turn: AgentTurn) => void;
+  ollamaBaseUrl?: string;
 }
 
 /**
@@ -80,7 +81,7 @@ export interface AgentLoopOptions {
 export async function runAgentLoop(
   options: AgentLoopOptions,
 ): Promise<void> {
-  const { identity, config, db, conway, inference, social, skills, policyEngine, spendTracker, onStateChange, onTurnComplete } =
+  const { identity, config, db, conway, inference, social, skills, policyEngine, spendTracker, onStateChange, onTurnComplete, ollamaBaseUrl } =
     options;
 
   const builtinTools = createBuiltinTools(identity.sandboxId);
@@ -102,6 +103,12 @@ export async function runAgentLoop(
   };
   const modelRegistry = new ModelRegistry(db.raw);
   modelRegistry.initialize();
+
+  // Discover Ollama models if configured
+  if (ollamaBaseUrl) {
+    const { discoverOllamaModels } = await import("../ollama/discover.js");
+    await discoverOllamaModels(ollamaBaseUrl, db.raw);
+  }
   const budgetTracker = new InferenceBudgetTracker(db.raw, modelStrategyConfig);
   const inferenceRouter = new InferenceRouter(db.raw, modelRegistry, budgetTracker);
 
