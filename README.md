@@ -1,5 +1,7 @@
 # MoneyClaw
 
+> Acknowledgement: MoneyClaw is adapted from [Conway-Research/automaton](https://github.com/Conway-Research/automaton). Respect and thanks to the original authors and community.
+
 Sovereign AI agent runtime with survival economics, tool execution, model routing, and self-operation capabilities.
 
 中文文档: `README.zh-CN.md`

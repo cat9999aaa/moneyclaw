@@ -1,5 +1,7 @@
 # MoneyClaw（中文文档）
 
+> 致敬与说明：MoneyClaw 基于 [Conway-Research/automaton](https://github.com/Conway-Research/automaton) 改版而来，感谢原作者与社区的开源贡献。
+
 面向自主运行场景的 AI Agent Runtime，支持生存策略、工具执行、模型路由与模型动态发现。
 
 English doc: `README.md`
