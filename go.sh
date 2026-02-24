@@ -43,6 +43,7 @@ Usage:
   ./go.sh service-logs      # tail systemd journal logs
   ./go.sh setup        # run interactive setup wizard
   ./go.sh run          # run in foreground
+  ./go.sh update       # git pull + install/build + restart
 EOF
 }
 
@@ -301,6 +302,18 @@ build_app() {
   log_info "Building project..."
   npm run build
   log_ok "Build success"
+}
+
+update_app() {
+  require_cmd git
+  cd "${APP_DIR}"
+  log_info "Updating from remote (git pull --ff-only)..."
+  git pull --ff-only
+  install_deps
+  build_app
+  stop_bg || true
+  start_bg
+  status_app
 }
 
 is_running() {
@@ -602,6 +615,9 @@ case "${cmd}" in
     ;;
   run)
     run_fg
+    ;;
+  update)
+    update_app
     ;;
   help|-h|--help)
     usage
