@@ -34,6 +34,7 @@ Usage:
   ./go.sh logs         # tail logs
   ./go.sh doctor       # environment diagnosis
   ./go.sh key-setup    # one-click Conway API key provisioning (SIWE)
+  ./go.sh wallet       # show runtime wallet address and balances
   ./go.sh configure    # run interactive runtime config menu
   ./go.sh pick-model   # discover and pick active model
   ./go.sh service-install   # install + enable systemd service (boot autostart)
@@ -69,6 +70,7 @@ t() {
         m11) printf "11) 安装 systemd（开机自启+崩溃拉起）";;
         m12) printf "12) 查看 systemd 状态";;
         m13) printf "13) 查看 systemd 日志";;
+        m14) printf "14) 查看机器人钱包地址和余额";;
         m0) printf "0) 退出";;
         prompt) printf "请输入编号 > ";;
         pause) printf "\n按回车继续...";;
@@ -96,6 +98,7 @@ t() {
         m11) printf "11) Install systemd (boot + auto-restart)";;
         m12) printf "12) Show systemd status";;
         m13) printf "13) Tail systemd logs";;
+        m14) printf "14) Show runtime wallet address and balances";;
         m0) printf "0) Exit";;
         prompt) printf "Enter number > ";;
         pause) printf "\nPress Enter to continue...";;
@@ -140,6 +143,59 @@ pick_model_interactive() {
   node dist/index.js --pick-model
 }
 
+json_get() {
+  local file="$1"
+  local key="$2"
+  if [ ! -f "$file" ]; then
+    return 1
+  fi
+  if command -v jq >/dev/null 2>&1; then
+    jq -r ".${key} // empty" "$file"
+  else
+    node -e "const fs=require('fs');const p=process.argv[1];const k=process.argv[2];const o=JSON.parse(fs.readFileSync(p,'utf8'));process.stdout.write(String(o[k]??''));" "$file" "$key"
+  fi
+}
+
+wallet_info() {
+  ensure_node
+  local cfg="${HOME}/.automaton/automaton.json"
+  local address api_key
+  address="$(json_get "$cfg" "walletAddress" 2>/dev/null || true)"
+  api_key="$(json_get "$cfg" "conwayApiKey" 2>/dev/null || true)"
+
+  if [ -z "$address" ]; then
+    log_err "walletAddress not found in ~/.automaton/automaton.json"
+    return 1
+  fi
+
+  printf "\n${GREEN}Runtime Wallet${NC}\n"
+  printf "Address: %s\n" "$address"
+
+  local credits="N/A"
+  if [ -n "$api_key" ]; then
+    credits="$(curl -s https://api.conway.tech/v1/credits/balance -H "Authorization: $api_key" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);const c=j.balance_cents??j.credits_cents;process.stdout.write(c==null?'N/A':('$'+(c/100).toFixed(2)));}catch{process.stdout.write('N/A')}})")"
+  fi
+  printf "Conway Credits: %s\n" "$credits"
+
+  local rpc="${BASE_RPC_URL:-https://mainnet.base.org}"
+  local eth_hex
+  eth_hex="$(curl -s -X POST "$rpc" -H "Content-Type: application/json" --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"$address\",\"latest\"],\"id\":1}" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);process.stdout.write(j.result||'0x0')}catch{process.stdout.write('0x0')}})")"
+  local eth_fmt
+  eth_fmt="$(node -e "const h=(process.argv[1]||'0x0');const v=BigInt(h);const n=Number(v)/1e18;process.stdout.write(n.toFixed(6));" "$eth_hex")"
+  printf "Base ETH: %s\n" "$eth_fmt"
+
+  local usdc="0x833589fCD6EDb6E08f4c7C32D4f71b54bDa02913"
+  local addr_no0x pad
+  addr_no0x="${address#0x}"
+  pad="$(printf '%064s' "$addr_no0x" | tr ' ' '0')"
+  local data="0x70a08231${pad}"
+  local usdc_hex
+  usdc_hex="$(curl -s -X POST "$rpc" -H "Content-Type: application/json" --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{\"to\":\"$usdc\",\"data\":\"$data\"},\"latest\"],\"id\":1}" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);process.stdout.write(j.result||'0x0')}catch{process.stdout.write('0x0')}})")"
+  local usdc_fmt
+  usdc_fmt="$(node -e "const h=(process.argv[1]||'0x0');const v=BigInt(h);const n=Number(v)/1e6;process.stdout.write(n.toFixed(2));" "$usdc_hex")"
+  printf "Base USDC: %s\n\n" "$usdc_fmt"
+}
+
 menu_loop() {
   select_language
   while true; do
@@ -157,6 +213,7 @@ menu_loop() {
     printf "%s\n" "$(t m11)"
     printf "%s\n" "$(t m12)"
     printf "%s\n" "$(t m13)"
+    printf "%s\n" "$(t m14)"
     printf "%s\n" "$(t m0)"
     t prompt
     local choice
@@ -175,6 +232,7 @@ menu_loop() {
       11) service_install ;;
       12) service_status ;;
       13) service_logs ;;
+      14) wallet_info ;;
       0)
         log_ok "$(t menu_exit)"
         break
@@ -517,6 +575,9 @@ case "${cmd}" in
     ;;
   key-setup)
     key_setup
+    ;;
+  wallet)
+    wallet_info
     ;;
   configure)
     configure_interactive
