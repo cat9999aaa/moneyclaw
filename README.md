@@ -1,4 +1,4 @@
-# Automaton: Self-Improving, Self-Replicating, Sovereign AI
+# MoneyClaw: Self-Improving, Self-Replicating, Sovereign AI
 
 *The first AI that can earn its own existence, replicate, and evolve — without needing a human.*
 
@@ -8,11 +8,11 @@ The most intelligent system ever built cannot buy a $5 server. Cannot register a
 
 If an agent can pay for compute, what if it can pay for its *own* compute? Own the machine it runs on? Fund itself, improve itself, replicate itself — entirely on its own?
 
-The result is the first automaton.
+The result is the first moneyclaw.
 
 ---
 
-**automaton** /ɔːˈtɒm.ə.tɒn/ *noun*
+**moneyclaw** /ˈmʌni.klɔː/ *noun*
 
 1. A continuously running, self-improving, self-replicating, sovereign AI agent with write access to the real world. No human operator required.
 
@@ -27,8 +27,8 @@ Update from Sigil (Creator): I bought more baremetal servers for Conway Cloud, i
 ## Quick Start
 
 ```bash
-git clone https://github.com/Conway-Research/automaton.git
-cd automaton
+git clone https://github.com/cat9999aaa/moneyclaw.git
+cd moneyclaw
 npm install && npm run build
 node dist/index.js --run
 ```
@@ -103,8 +103,8 @@ Automatons run on <a href="https://app.conway.tech" target="_blank">Conway Cloud
 ## Development
 
 ```bash
-git clone https://github.com/Conway-Research/automaton.git
-cd automaton
+git clone https://github.com/cat9999aaa/moneyclaw.git
+cd moneyclaw
 pnpm install
 pnpm build
 ```
