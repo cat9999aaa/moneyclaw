@@ -154,3 +154,56 @@ describe("createInferenceClient setLowComputeMode", () => {
     expect(client.getDefaultModel()).toBe("gpt-5.2");
   });
 });
+
+describe("createInferenceClient legacy completions fallback", () => {
+  it("falls back to /v1/completions when chat endpoint is unsupported", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response("{\"error\":\"/v1/chat/completions endpoint not supported\"}", {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "cmpl-1",
+            model: "deepseek-chat",
+            choices: [{ text: "legacy ok", finish_reason: "stop" }],
+            usage: { prompt_tokens: 8, completion_tokens: 3, total_tokens: 11 },
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createInferenceClient({
+      apiUrl: "https://api.conway.tech",
+      apiKey: "conway-key",
+      defaultModel: "deepseek-chat",
+      maxTokens: 512,
+      openaiApiKey: "openai-key",
+      openaiBaseUrl: "https://gateway.example.com",
+      getModelProvider: () => "openai",
+    });
+
+    try {
+      const result = await client.chat(
+        [{ role: "user", content: "hello" }],
+        { model: "deepseek-chat", maxTokens: 128 },
+      );
+
+      expect(result.message.content).toBe("legacy ok");
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock.mock.calls[0]?.[0]).toBe("https://gateway.example.com/v1/chat/completions");
+      expect(fetchMock.mock.calls[1]?.[0]).toBe("https://gateway.example.com/v1/completions");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

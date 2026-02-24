@@ -426,6 +426,37 @@ describe("InferenceRouter", () => {
       expect(result.model).toBe("none");
       expect(result.finishReason).toBe("error");
     });
+
+    it("disables failing chat-incompatible model and retries next candidate", async () => {
+      const attemptedModels: string[] = [];
+      const mockChat = async (_msgs: any[], opts: any) => {
+        attemptedModels.push(String(opts.model || ""));
+        if (attemptedModels.length === 1) {
+          throw new Error("/v1/chat/completions endpoint not supported");
+        }
+        return {
+          message: { content: "fallback-ok", role: "assistant" },
+          usage: { promptTokens: 50, completionTokens: 20 },
+          finishReason: "stop",
+        };
+      };
+
+      const result = await router.route(
+        {
+          messages: [{ role: "user", content: "Hi" }],
+          taskType: "agent_turn",
+          tier: "normal",
+          sessionId: "fallback-session",
+        },
+        mockChat,
+      );
+
+      expect(result.content).toBe("fallback-ok");
+      expect(attemptedModels.length).toBe(2);
+      expect(registry.get("gpt-5.2")?.enabled).toBe(false);
+      expect(attemptedModels[0]).toBe("gpt-5.2");
+      expect(attemptedModels[1]).toBe("gpt-5-mini");
+    });
   });
 
   describe("transformMessagesForProvider", () => {

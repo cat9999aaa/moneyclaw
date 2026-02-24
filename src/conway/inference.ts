@@ -198,7 +198,7 @@ async function chatViaOpenAiCompatible(params: {
   backend: "conway" | "openai" | "ollama";
   httpClient: ResilientHttpClient;
 }): Promise<InferenceResponse> {
-  const resp = await params.httpClient.request(`${params.apiUrl}/v1/chat/completions`, {
+  const chatResp = await params.httpClient.request(`${params.apiUrl}/v1/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -211,14 +211,64 @@ async function chatViaOpenAiCompatible(params: {
     timeout: INFERENCE_TIMEOUT_MS,
   });
 
-  if (!resp.ok) {
-    const text = await resp.text();
+  if (!chatResp.ok) {
+    const chatErrorText = await chatResp.text();
+    if (shouldFallbackToLegacyCompletions(chatResp.status, chatErrorText, params.body)) {
+      const completionBody = buildLegacyCompletionBody(params.model, params.body);
+      const completionResp = await params.httpClient.request(`${params.apiUrl}/v1/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            params.backend === "openai" || params.backend === "ollama"
+              ? `Bearer ${params.apiKey}`
+              : params.apiKey,
+        },
+        body: JSON.stringify(completionBody),
+        timeout: INFERENCE_TIMEOUT_MS,
+      });
+
+      if (!completionResp.ok) {
+        const completionErrorText = await completionResp.text();
+        throw new Error(
+          `Inference error (${params.backend}): ${completionResp.status}: ${completionErrorText}`,
+        );
+      }
+
+      const completionData = await completionResp.json() as Record<string, unknown>;
+      const completionChoice = getFirstChoice(completionData);
+      const completionText =
+        typeof completionChoice?.text === "string" ? completionChoice.text : "";
+      if (!completionChoice) {
+        throw new Error("No completion choice returned from inference");
+      }
+
+      const usage: TokenUsage = {
+        promptTokens: getUsageNumber(completionData, "prompt_tokens"),
+        completionTokens: getUsageNumber(completionData, "completion_tokens"),
+        totalTokens: getUsageNumber(completionData, "total_tokens"),
+      };
+
+      return {
+        id: getStringField(completionData, "id"),
+        model: getStringField(completionData, "model") || params.model,
+        message: {
+          role: "assistant",
+          content: completionText,
+          tool_calls: undefined,
+        },
+        toolCalls: undefined,
+        usage,
+        finishReason: getStringField(completionChoice, "finish_reason") || "stop",
+      };
+    }
+
     throw new Error(
-      `Inference error (${params.backend}): ${resp.status}: ${text}`,
+      `Inference error (${params.backend}): ${chatResp.status}: ${chatErrorText}`,
     );
   }
 
-  const data = await resp.json() as any;
+  const data = await chatResp.json() as any;
   const choice = data.choices?.[0];
 
   if (!choice) {
@@ -254,6 +304,109 @@ async function chatViaOpenAiCompatible(params: {
     usage,
     finishReason: choice.finish_reason || "stop",
   };
+}
+
+function shouldFallbackToLegacyCompletions(
+  status: number,
+  responseText: string,
+  body: Record<string, unknown>,
+): boolean {
+  if (body.tools !== undefined) {
+    return false;
+  }
+  if (status === 404) {
+    return true;
+  }
+  const normalized = responseText.toLowerCase();
+  return (
+    normalized.includes("/v1/chat/completions endpoint not supported") ||
+    normalized.includes("chat/completions") && normalized.includes("not supported") ||
+    normalized.includes("convert_request_failed")
+  );
+}
+
+function buildLegacyCompletionBody(
+  model: string,
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  const prompt = buildPromptFromMessages(body.messages);
+  const maxTokens =
+    getNumberField(body, "max_tokens") ?? getNumberField(body, "max_completion_tokens");
+  const completionBody: Record<string, unknown> = {
+    model,
+    prompt,
+    stream: false,
+  };
+  if (typeof maxTokens === "number") {
+    completionBody.max_tokens = maxTokens;
+  }
+  const temperature = getNumberField(body, "temperature");
+  if (typeof temperature === "number") {
+    completionBody.temperature = temperature;
+  }
+  return completionBody;
+}
+
+function buildPromptFromMessages(messages: unknown): string {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    throw new Error("Cannot build completion prompt from empty messages");
+  }
+
+  const lines: string[] = [];
+  for (const message of messages) {
+    if (!message || typeof message !== "object") {
+      continue;
+    }
+    const role = getStringField(message as Record<string, unknown>, "role") || "user";
+    const content = getStringField(message as Record<string, unknown>, "content");
+    if (!content) {
+      continue;
+    }
+    lines.push(`${role}: ${content}`);
+  }
+
+  if (lines.length === 0) {
+    throw new Error("Cannot build completion prompt from empty messages");
+  }
+
+  return `${lines.join("\n\n")}\n\nassistant:`;
+}
+
+function getStringField(source: unknown, key: string): string {
+  if (!source || typeof source !== "object") {
+    return "";
+  }
+  const value = (source as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : "";
+}
+
+function getNumberField(source: unknown, key: string): number | undefined {
+  if (!source || typeof source !== "object") {
+    return undefined;
+  }
+  const value = (source as Record<string, unknown>)[key];
+  return typeof value === "number" ? value : undefined;
+}
+
+function getUsageNumber(data: Record<string, unknown>, key: string): number {
+  const usage = data.usage;
+  if (!usage || typeof usage !== "object") {
+    return 0;
+  }
+  const value = (usage as Record<string, unknown>)[key];
+  return typeof value === "number" ? value : 0;
+}
+
+function getFirstChoice(data: Record<string, unknown>): Record<string, unknown> | undefined {
+  const choices = data.choices;
+  if (!Array.isArray(choices) || choices.length === 0) {
+    return undefined;
+  }
+  const first = choices[0];
+  if (!first || typeof first !== "object") {
+    return undefined;
+  }
+  return first as Record<string, unknown>;
 }
 
 async function chatViaAnthropic(params: {

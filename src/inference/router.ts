@@ -140,6 +140,19 @@ export class InferenceRouter {
           finishReason: "timeout",
         };
       }
+
+      if (
+        this.budget.config.enableModelFallback &&
+        model.provider === "openai" &&
+        this.shouldDisableAndFallback(error)
+      ) {
+        this.registry.setEnabled(model.modelId, false);
+        const nextModel = this.selectModel(tier, taskType);
+        if (nextModel && nextModel.modelId !== model.modelId) {
+          return this.route(request, inferenceChat);
+        }
+      }
+
       throw error;
     }
     const latencyMs = Date.now() - startTime;
@@ -326,5 +339,14 @@ export class InferenceRouter {
 
   private getPreference(tier: SurvivalTier, taskType: InferenceTaskType): ModelPreference | undefined {
     return DEFAULT_ROUTING_MATRIX[tier]?.[taskType];
+  }
+
+  private shouldDisableAndFallback(error: unknown): boolean {
+    const msg = String((error as any)?.message || "");
+    return (
+      msg.includes("/v1/chat/completions endpoint not supported") ||
+      msg.includes("convert_request_failed") ||
+      msg.includes("model_not_found")
+    );
   }
 }
