@@ -69,7 +69,6 @@ const PROTECTED_FILES: readonly string[] = Object.freeze([
   "skills/registry.js",
   // Configuration and identity
   "automaton.json",
-  "package.json",
   "SOUL.md",
   // Policy engine (protect from self-modification)
   "agent/policy-engine.ts",

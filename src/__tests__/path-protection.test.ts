@@ -83,7 +83,7 @@ describe("isProtectedFile", () => {
     expect(isProtectedFile("/some/path/skills/registry.ts")).toBe(true);
     expect(isProtectedFile("/some/path/skills/registry.js")).toBe(true);
     expect(isProtectedFile("/some/path/automaton.json")).toBe(true);
-    expect(isProtectedFile("/some/path/package.json")).toBe(true);
+    expect(isProtectedFile("/some/path/package.json")).toBe(false);
     expect(isProtectedFile("/some/path/SOUL.md")).toBe(true);
     expect(isProtectedFile("/some/path/agent/policy-engine.ts")).toBe(true);
     expect(isProtectedFile("/some/path/agent/policy-engine.js")).toBe(true);
