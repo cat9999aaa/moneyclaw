@@ -350,6 +350,7 @@ export async function runConfigure(): Promise<void> {
     }
   }
 
+  if (rl) { rl.close(); rl = null; }
   closePrompts();
   console.log(chalk.dim("  Done. Restart the automaton to apply changes.\n"));
 }
