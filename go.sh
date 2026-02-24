@@ -6,6 +6,7 @@ APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PID_DIR="${APP_DIR}/.run"
 PID_FILE="${PID_DIR}/${APP_NAME}.pid"
 LOG_FILE="${PID_DIR}/${APP_NAME}.log"
+LANG_CHOICE="${MONEYCLAW_LANG:-}"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -33,6 +34,8 @@ Usage:
   ./go.sh logs         # tail logs
   ./go.sh doctor       # environment diagnosis
   ./go.sh key-setup    # one-click Conway API key provisioning (SIWE)
+  ./go.sh configure    # run interactive runtime config menu
+  ./go.sh pick-model   # discover and pick active model
   ./go.sh service-install   # install + enable systemd service (boot autostart)
   ./go.sh service-remove    # disable + remove systemd service
   ./go.sh service-status    # show systemd service status
@@ -40,6 +43,149 @@ Usage:
   ./go.sh setup        # run interactive setup wizard
   ./go.sh run          # run in foreground
 EOF
+}
+
+t() {
+  local key="$1"
+  case "${LANG_CHOICE}" in
+    zh)
+      case "$key" in
+        lang_pick) printf "请选择语言 / Select language:\n  1) 中文\n  2) English\n> ";;
+        banner_1) printf "MONEYCLAW CONTROL CENTER";;
+        banner_2) printf "主控面板";;
+        menu_title) printf "请选择操作";;
+        menu_invalid) printf "无效选项，请重试";;
+        menu_exit) printf "已退出。";;
+        m1) printf "1) 一键启动（安装+构建+后台启动）";;
+        m2) printf "2) 配置 Conway API Key（SIWE）";;
+        m3) printf "3) 运行初始化向导（--setup）";;
+        m4) printf "4) 打开运行时配置菜单（--configure）";;
+        m5) printf "5) 发现并选择模型（--pick-model）";;
+        m6) printf "6) 启动后台进程";;
+        m7) printf "7) 停止后台进程";;
+        m8) printf "8) 重启后台进程";;
+        m9) printf "9) 查看状态";;
+        m10) printf "10) 查看日志";;
+        m11) printf "11) 安装 systemd（开机自启+崩溃拉起）";;
+        m12) printf "12) 查看 systemd 状态";;
+        m13) printf "13) 查看 systemd 日志";;
+        m0) printf "0) 退出";;
+        prompt) printf "请输入编号 > ";;
+        pause) printf "\n按回车继续...";;
+        *) printf "%s" "$key";;
+      esac
+      ;;
+    *)
+      case "$key" in
+        lang_pick) printf "Choose language / 请选择语言:\n  1) English\n  2) 中文\n> ";;
+        banner_1) printf "MONEYCLAW CONTROL CENTER";;
+        banner_2) printf "Operations Console";;
+        menu_title) printf "Select an action";;
+        menu_invalid) printf "Invalid option, try again";;
+        menu_exit) printf "Exited.";;
+        m1) printf "1) One-click up (install+build+start)";;
+        m2) printf "2) Configure Conway API Key (SIWE)";;
+        m3) printf "3) Run setup wizard (--setup)";;
+        m4) printf "4) Open runtime config menu (--configure)";;
+        m5) printf "5) Discover and pick model (--pick-model)";;
+        m6) printf "6) Start background process";;
+        m7) printf "7) Stop background process";;
+        m8) printf "8) Restart background process";;
+        m9) printf "9) Show status";;
+        m10) printf "10) Tail logs";;
+        m11) printf "11) Install systemd (boot + auto-restart)";;
+        m12) printf "12) Show systemd status";;
+        m13) printf "13) Tail systemd logs";;
+        m0) printf "0) Exit";;
+        prompt) printf "Enter number > ";;
+        pause) printf "\nPress Enter to continue...";;
+        *) printf "%s" "$key";;
+      esac
+      ;;
+  esac
+}
+
+select_language() {
+  if [ -n "${LANG_CHOICE}" ]; then
+    return
+  fi
+  printf "\n"
+  t lang_pick
+  local pick
+  read -r pick || pick=""
+  case "$pick" in
+    2) LANG_CHOICE="zh" ;;
+    *) LANG_CHOICE="en" ;;
+  esac
+}
+
+show_menu_banner() {
+  printf "\n"
+  printf "${BLUE}╔══════════════════════════════════════════════════════════════╗${NC}\n"
+  printf "${BLUE}║${NC} ${GREEN}⚡ %s${NC}                                        ${BLUE}║${NC}\n" "$(t banner_1)"
+  printf "${BLUE}║${NC} ${YELLOW}%s${NC}                                           ${BLUE}║${NC}\n" "$(t banner_2)"
+  printf "${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}\n"
+  printf "\n${YELLOW}%s${NC}\n" "$(t menu_title)"
+}
+
+configure_interactive() {
+  ensure_node
+  cd "${APP_DIR}"
+  node dist/index.js --configure
+}
+
+pick_model_interactive() {
+  ensure_node
+  cd "${APP_DIR}"
+  node dist/index.js --pick-model
+}
+
+menu_loop() {
+  select_language
+  while true; do
+    show_menu_banner
+    printf "%s\n" "$(t m1)"
+    printf "%s\n" "$(t m2)"
+    printf "%s\n" "$(t m3)"
+    printf "%s\n" "$(t m4)"
+    printf "%s\n" "$(t m5)"
+    printf "%s\n" "$(t m6)"
+    printf "%s\n" "$(t m7)"
+    printf "%s\n" "$(t m8)"
+    printf "%s\n" "$(t m9)"
+    printf "%s\n" "$(t m10)"
+    printf "%s\n" "$(t m11)"
+    printf "%s\n" "$(t m12)"
+    printf "%s\n" "$(t m13)"
+    printf "%s\n" "$(t m0)"
+    t prompt
+    local choice
+    read -r choice || choice="0"
+    case "$choice" in
+      1) install_deps; build_app; start_bg; status_app ;;
+      2) key_setup ;;
+      3) setup_interactive ;;
+      4) configure_interactive ;;
+      5) pick_model_interactive ;;
+      6) start_bg ;;
+      7) stop_bg ;;
+      8) stop_bg; start_bg; status_app ;;
+      9) status_app ;;
+      10) logs_app ;;
+      11) service_install ;;
+      12) service_status ;;
+      13) service_logs ;;
+      0)
+        log_ok "$(t menu_exit)"
+        break
+        ;;
+      *)
+        log_warn "$(t menu_invalid)"
+        ;;
+    esac
+    printf "%s" "$(t pause)"
+    read -r _ || true
+  done
 }
 
 require_cmd() {
@@ -323,7 +469,15 @@ service_logs() {
   run_as_root journalctl -u "${APP_NAME}.service" -n 200 -f
 }
 
-cmd="${1:-up}"
+if [ "$#" -eq 0 ]; then
+  if [ -t 0 ] && [ -t 1 ]; then
+    cmd="menu"
+  else
+    cmd="up"
+  fi
+else
+  cmd="$1"
+fi
 
 case "${cmd}" in
   up)
@@ -358,8 +512,17 @@ case "${cmd}" in
   doctor)
     doctor
     ;;
+  menu)
+    menu_loop
+    ;;
   key-setup)
     key_setup
+    ;;
+  configure)
+    configure_interactive
+    ;;
+  pick-model)
+    pick_model_interactive
     ;;
   service-install)
     service_install
