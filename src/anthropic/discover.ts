@@ -6,7 +6,7 @@
  */
 
 import type BetterSqlite3 from "better-sqlite3";
-import { modelRegistryUpsert, modelRegistryGet } from "../state/database.js";
+import { modelRegistryUpsert, modelRegistryGet, modelRegistryGetAll, modelRegistrySetEnabled } from "../state/database.js";
 import type { ModelRegistryRow } from "../types.js";
 import { createLogger } from "../observability/logger.js";
 
@@ -46,6 +46,7 @@ export async function discoverAnthropicModels(
   const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
   const now = new Date().toISOString();
   const registered: string[] = [];
+  const discovered = new Set<string>();
   
   let afterId: string | undefined;
   let pageCount = 0;
@@ -104,6 +105,7 @@ export async function discoverAnthropicModels(
 
         modelRegistryUpsert(db, row);
         registered.push(modelId);
+        discovered.add(modelId);
       }
 
       // Check if there are more pages
@@ -118,6 +120,16 @@ export async function discoverAnthropicModels(
       logger.info(`Anthropic: discovered ${registered.length} model(s)`);
     } else {
       logger.info(`Anthropic: no new models discovered from ${baseUrl}`);
+    }
+
+    if (discovered.size > 0) {
+      const existingRows = modelRegistryGetAll(db);
+      for (const row of existingRows) {
+        if (row.provider !== "anthropic") continue;
+        if (discovered.has(row.modelId)) continue;
+        if (!row.enabled) continue;
+        modelRegistrySetEnabled(db, row.modelId, false);
+      }
     }
   } catch (err: any) {
     logger.warn(`Anthropic API not reachable at ${baseUrl}: ${err.message}`);

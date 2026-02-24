@@ -6,7 +6,7 @@
  */
 
 import type BetterSqlite3 from "better-sqlite3";
-import { modelRegistryUpsert, modelRegistryGet } from "../state/database.js";
+import { modelRegistryUpsert, modelRegistryGet, modelRegistryGetAll, modelRegistrySetEnabled } from "../state/database.js";
 import type { ModelRegistryRow } from "../types.js";
 import { createLogger } from "../observability/logger.js";
 
@@ -75,6 +75,7 @@ export async function discoverOpenAIModels(
 
   const now = new Date().toISOString();
   const registered: string[] = [];
+  const discovered = new Set<string>();
 
   for (const m of data.data) {
     const modelId = m.id;
@@ -107,6 +108,17 @@ export async function discoverOpenAIModels(
 
     modelRegistryUpsert(db, row);
     registered.push(modelId);
+    discovered.add(modelId);
+  }
+
+  if (discovered.size > 0) {
+    const existingRows = modelRegistryGetAll(db);
+    for (const row of existingRows) {
+      if (row.provider !== "openai") continue;
+      if (discovered.has(row.modelId)) continue;
+      if (!row.enabled) continue;
+      modelRegistrySetEnabled(db, row.modelId, false);
+    }
   }
 
   if (registered.length > 0) {
