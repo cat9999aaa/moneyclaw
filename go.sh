@@ -32,6 +32,7 @@ Usage:
   ./go.sh status       # show process status
   ./go.sh logs         # tail logs
   ./go.sh doctor       # environment diagnosis
+  ./go.sh key-setup    # one-click Conway API key provisioning (SIWE)
   ./go.sh service-install   # install + enable systemd service (boot autostart)
   ./go.sh service-remove    # disable + remove systemd service
   ./go.sh service-status    # show systemd service status
@@ -222,6 +223,21 @@ run_fg() {
   exec node dist/index.js --run
 }
 
+key_setup() {
+  ensure_node
+  cd "${APP_DIR}"
+
+  if [ ! -f "${APP_DIR}/dist/index.js" ]; then
+    log_warn "dist/index.js not found, building first..."
+    ensure_pnpm
+    build_app
+  fi
+
+  log_info "Provisioning Conway API key via SIWE..."
+  node dist/index.js --provision
+  log_ok "Provision finished. You can run: ./go.sh status"
+}
+
 run_as_root() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
@@ -341,6 +357,9 @@ case "${cmd}" in
     ;;
   doctor)
     doctor
+    ;;
+  key-setup)
+    key_setup
     ;;
   service-install)
     service_install
