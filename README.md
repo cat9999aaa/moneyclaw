@@ -10,6 +10,7 @@ Sovereign AI agent runtime with survival economics, tool execution, model routin
 - Requirements
 - Installation
 - Quick Start
+- One-Command Startup (`go.sh`)
 - CLI Commands
 - Configuration
 - Model Management (Dynamic Discovery + Cache)
@@ -58,6 +59,44 @@ Useful first-run flow:
 2. setup wizard asks for API keys and optional provider base URLs
 3. config is saved to `~/.automaton/automaton.json`
 4. runtime starts with heartbeat + agent loop
+
+## One-Command Startup (`go.sh`)
+
+`go.sh` is an all-in-one launcher for server deployment.
+
+```bash
+cd ~/moneyclaw
+./go.sh up
+```
+
+Common commands:
+
+- `./go.sh up` install + build + background start
+- `./go.sh restart` restart process
+- `./go.sh status` process status
+- `./go.sh logs` tail runtime logs
+- `./go.sh doctor` environment diagnostics
+- `./go.sh stop` stop process
+
+Systemd (boot autostart + crash auto-restart):
+
+```bash
+./go.sh service-install
+./go.sh service-status
+./go.sh service-logs
+```
+
+Service cleanup:
+
+```bash
+./go.sh service-remove
+```
+
+Runtime artifacts:
+
+- PID file: `.run/moneyclaw.pid`
+- app log: `.run/moneyclaw.log`
+- systemd log mirror: `.run/systemd.log`
 
 ## CLI Commands
 

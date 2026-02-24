@@ -10,6 +10,7 @@ English doc: `README.md`
 - 环境要求
 - 安装
 - 快速开始
+- 一键启动（`go.sh`）
 - CLI 命令
 - 配置说明
 - 模型管理（动态发现 + 缓存）
@@ -58,6 +59,44 @@ node dist/index.js --run
 2. 采集 API Key 与可选 Base URL
 3. 写入 `~/.automaton/automaton.json`
 4. 启动 Runtime（heartbeat + agent loop）
+
+## 一键启动（`go.sh`）
+
+`go.sh` 是面向服务器部署的一体化启动脚本。
+
+```bash
+cd ~/moneyclaw
+./go.sh up
+```
+
+常用命令：
+
+- `./go.sh up` 安装依赖 + 构建 + 后台启动
+- `./go.sh restart` 重启进程
+- `./go.sh status` 查看进程状态
+- `./go.sh logs` 实时日志
+- `./go.sh doctor` 环境诊断
+- `./go.sh stop` 停止进程
+
+Systemd（开机自启动 + 崩溃自动拉起）：
+
+```bash
+./go.sh service-install
+./go.sh service-status
+./go.sh service-logs
+```
+
+移除服务：
+
+```bash
+./go.sh service-remove
+```
+
+运行相关文件：
+
+- PID 文件：`.run/moneyclaw.pid`
+- 运行日志：`.run/moneyclaw.log`
+- systemd 日志镜像：`.run/systemd.log`
 
 ## CLI 命令
 
