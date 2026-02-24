@@ -1,7 +1,7 @@
 {
-  "name": "@conway/automaton",
+  "name": "moneyclaw",
   "version": "0.1.0",
-  "description": "Conway Automaton - Sovereign AI Agent Runtime",
+  "description": "MoneyClaw - Sovereign AI Agent Runtime",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,7 +25,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Conway-Research/automaton.git"
+    "url": "https://github.com/cat9999aaa/moneyclaw.git"
   },
   "homepage": "https://conway.tech",
   "keywords": [

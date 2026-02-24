@@ -42,6 +42,8 @@ export interface AutomatonConfig {
   conwayApiKey: string;
   openaiApiKey?: string;
   anthropicApiKey?: string;
+  openaiBaseUrl?: string;
+  anthropicBaseUrl?: string;
   ollamaBaseUrl?: string;
   inferenceModel: string;
   maxTokensPerTurn: number;

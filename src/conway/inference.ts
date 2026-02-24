@@ -26,6 +26,8 @@ interface InferenceClientOptions {
   lowComputeModel?: string;
   openaiApiKey?: string;
   anthropicApiKey?: string;
+  openaiBaseUrl?: string;
+  anthropicBaseUrl?: string;
   ollamaBaseUrl?: string;
   /** Optional registry lookup — if provided, used before name heuristics */
   getModelProvider?: (modelId: string) => string | undefined;
@@ -36,7 +38,7 @@ type InferenceBackend = "conway" | "openai" | "anthropic" | "ollama";
 export function createInferenceClient(
   options: InferenceClientOptions,
 ): InferenceClient {
-  const { apiUrl, apiKey, openaiApiKey, anthropicApiKey, ollamaBaseUrl, getModelProvider } = options;
+  const { apiUrl, apiKey, openaiApiKey, anthropicApiKey, ollamaBaseUrl, openaiBaseUrl, anthropicBaseUrl, getModelProvider } = options;
   const httpClient = new ResilientHttpClient({
     baseTimeout: INFERENCE_TIMEOUT_MS,
     retryableStatuses: [429, 500, 502, 503, 504],
@@ -93,12 +95,13 @@ export function createInferenceClient(
         tools,
         temperature: opts?.temperature,
         anthropicApiKey: anthropicApiKey as string,
+        anthropicBaseUrl,
         httpClient,
       });
     }
 
     const openAiLikeApiUrl =
-      backend === "openai" ? "https://api.openai.com" :
+      backend === "openai" ? (openaiBaseUrl || "https://api.openai.com").replace(/\/$/, "") :
       backend === "ollama" ? (ollamaBaseUrl as string).replace(/\/$/, "") :
       apiUrl;
     const openAiLikeApiKey =
@@ -260,6 +263,7 @@ async function chatViaAnthropic(params: {
   tools?: InferenceToolDefinition[];
   temperature?: number;
   anthropicApiKey: string;
+  anthropicBaseUrl?: string;
   httpClient: ResilientHttpClient;
 }): Promise<InferenceResponse> {
   const transformed = transformMessagesForAnthropic(params.messages);
@@ -289,7 +293,8 @@ async function chatViaAnthropic(params: {
     body.tool_choice = { type: "auto" };
   }
 
-  const resp = await params.httpClient.request("https://api.anthropic.com/v1/messages", {
+  const anthropicBase = (params.anthropicBaseUrl || "https://api.anthropic.com").replace(/\/$/, "");
+  const resp = await params.httpClient.request(`${anthropicBase}/v1/messages`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

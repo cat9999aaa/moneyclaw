@@ -121,6 +121,8 @@ export function createConfig(params: {
   openaiApiKey?: string;
   anthropicApiKey?: string;
   ollamaBaseUrl?: string;
+  openaiBaseUrl?: string;
+  anthropicBaseUrl?: string;
   parentAddress?: Address;
   treasuryPolicy?: TreasuryPolicy;
 }): AutomatonConfig {
@@ -137,6 +139,8 @@ export function createConfig(params: {
     openaiApiKey: params.openaiApiKey,
     anthropicApiKey: params.anthropicApiKey,
     ollamaBaseUrl: params.ollamaBaseUrl,
+    openaiBaseUrl: params.openaiBaseUrl,
+    anthropicBaseUrl: params.anthropicBaseUrl,
     inferenceModel: DEFAULT_CONFIG.inferenceModel || "gpt-5.2",
     maxTokensPerTurn: DEFAULT_CONFIG.maxTokensPerTurn || 4096,
     heartbeatConfigPath:

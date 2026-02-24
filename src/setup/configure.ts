@@ -206,6 +206,8 @@ async function configureProviders(config: AutomatonConfig): Promise<void> {
   config.openaiApiKey = await askString("OpenAI API key  (sk-...)", config.openaiApiKey) || undefined;
   config.anthropicApiKey = await askString("Anthropic API key  (sk-ant-...)", config.anthropicApiKey) || undefined;
   config.ollamaBaseUrl = await askString("Ollama base URL  (http://localhost:11434)", config.ollamaBaseUrl) || undefined;
+  config.openaiBaseUrl = await askString("OpenAI base URL  (https://api.openai.com)", config.openaiBaseUrl) || undefined;
+  config.anthropicBaseUrl = await askString("Anthropic base URL  (https://api.anthropic.com)", config.anthropicBaseUrl) || undefined;
 
   console.log("");
 }

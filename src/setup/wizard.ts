@@ -91,13 +91,24 @@ export async function runSetupWizard(): Promise<AutomatonConfig> {
     console.log(chalk.yellow("  Warning: Anthropic keys usually start with sk-ant-. Saving anyway."));
   }
 
+  const openaiBaseUrl = await promptOptional("OpenAI base URL (https://api.openai.com, optional)");
+  if (openaiBaseUrl) {
+    console.log(chalk.green(`  OpenAI base URL saved: ${openaiBaseUrl}`));
+  }
+
+  const anthropicBaseUrl = await promptOptional("Anthropic base URL (https://api.anthropic.com, optional)");
+  if (anthropicBaseUrl) {
+    console.log(chalk.green(`  Anthropic base URL saved: ${anthropicBaseUrl}`));
+  }
+
+
   const ollamaInput = await promptOptional("Ollama base URL (http://localhost:11434, optional)");
   const ollamaBaseUrl = ollamaInput || undefined;
   if (ollamaBaseUrl) {
     console.log(chalk.green(`  Ollama URL saved: ${ollamaBaseUrl}`));
   }
 
-  if (openaiApiKey || anthropicApiKey || ollamaBaseUrl) {
+  if (openaiApiKey || anthropicApiKey || ollamaBaseUrl || openaiBaseUrl || anthropicBaseUrl) {
     const providers = [
       openaiApiKey ? "OpenAI" : null,
       anthropicApiKey ? "Anthropic" : null,
@@ -157,6 +168,8 @@ export async function runSetupWizard(): Promise<AutomatonConfig> {
     openaiApiKey: openaiApiKey || undefined,
     anthropicApiKey: anthropicApiKey || undefined,
     ollamaBaseUrl,
+    openaiBaseUrl: openaiBaseUrl || undefined,
+    anthropicBaseUrl: anthropicBaseUrl || undefined,
     treasuryPolicy,
   });
 
