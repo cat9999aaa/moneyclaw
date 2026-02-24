@@ -254,6 +254,43 @@ Common causes:
 - missing provider API key
 - provider endpoint/auth rejected request
 
+### Credits show `$0.00` even though MetaMask has ETH
+
+This is expected in many setups: **ETH balance is not Conway credits**.
+
+What matters for runtime credits:
+
+1. Conway API key account balance
+2. Runtime wallet funding for topup flow (typically USDC on Base)
+
+Quick MetaMask example flow:
+
+```bash
+# 1) Ensure API key is provisioned
+./go.sh key-setup
+
+# 2) Check runtime wallet vs creator wallet
+jq -r '.walletAddress,.creatorAddress' ~/.automaton/automaton.json
+
+# 3) Restart and watch topup/bootstrap logs
+./go.sh restart
+./go.sh logs
+```
+
+In MetaMask, fund the **runtime wallet** (`walletAddress`) on **Base** with:
+
+- a small amount of ETH (gas)
+- enough USDC (for credit purchase/topup)
+
+Direct credit-balance check:
+
+```bash
+API_KEY=$(jq -r '.conwayApiKey' ~/.automaton/automaton.json)
+curl -s https://api.conway.tech/v1/credits/balance -H "Authorization: $API_KEY"
+```
+
+If API returns `0`, your Conway credits are still empty even if MetaMask ETH is non-zero.
+
 ### Push fails with GitHub 403
 
 - verify token scope includes repository write permissions

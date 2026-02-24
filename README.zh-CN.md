@@ -254,6 +254,43 @@ npm run dev
 - Provider API Key 未配置
 - Provider 接口鉴权失败或返回异常
 
+### 明明 MetaMask 有 ETH，为什么 Credits 还是 `$0.00`
+
+这在很多场景是正常的：**ETH 余额不等于 Conway credits**。
+
+运行时真正看的是：
+
+1. 当前 Conway API Key 对应账户的 credits
+2. 运行钱包是否具备可走 topup 的资金（通常是 Base 上的 USDC）
+
+按小狐狸（MetaMask）可用流程排查：
+
+```bash
+# 1）先保证 API key 重新配置到位
+./go.sh key-setup
+
+# 2）确认运行钱包和创建者钱包
+jq -r '.walletAddress,.creatorAddress' ~/.automaton/automaton.json
+
+# 3）重启并观察 bootstrap/topup 日志
+./go.sh restart
+./go.sh logs
+```
+
+在 MetaMask 里，给 **运行钱包**（`walletAddress`）在 **Base** 网络补充：
+
+- 少量 ETH（gas）
+- 足够 USDC（用于 credits 充值）
+
+直接查询 credits：
+
+```bash
+API_KEY=$(jq -r '.conwayApiKey' ~/.automaton/automaton.json)
+curl -s https://api.conway.tech/v1/credits/balance -H "Authorization: $API_KEY"
+```
+
+如果 API 返回仍是 `0`，说明 Conway credits 账户还没有充值成功，即使 ETH 不为 0。
+
 ### 推送 GitHub 出现 403
 
 - 检查 Token 是否有仓库写权限
