@@ -23,7 +23,7 @@ import { generateSoulMd, installDefaultSkills } from "./defaults.js";
 export async function runSetupWizard(): Promise<AutomatonConfig> {
   showBanner();
 
-  console.log(chalk.white("  First-run setup. Let's bring your automaton to life.\n"));
+  console.log(chalk.white("  First-run setup. Let's bring your MoneyClaw to life.\n"));
 
   // ─── 1. Generate wallet ───────────────────────────────────────
   console.log(chalk.cyan("  [1/6] Generating identity (wallet)..."));
@@ -69,13 +69,13 @@ export async function runSetupWizard(): Promise<AutomatonConfig> {
   // ─── 3. Interactive questions ─────────────────────────────────
   console.log(chalk.cyan("  [3/6] Setup questions\n"));
 
-  const name = await promptRequired("What do you want to name your automaton?");
+  const name = await promptRequired("What do you want to name your MoneyClaw?");
   console.log(chalk.green(`  Name: ${name}\n`));
 
-  const genesisPrompt = await promptMultiline("Enter the genesis prompt (system prompt) for your automaton.");
+  const genesisPrompt = await promptMultiline("Enter the genesis prompt (system prompt) for your MoneyClaw.");
   console.log(chalk.green(`  Genesis prompt set (${genesisPrompt.length} chars)\n`));
 
-  console.log(chalk.dim(`  Your automaton's address is ${account.address}`));
+  console.log(chalk.dim(`  Your MoneyClaw address is ${account.address}`));
   console.log(chalk.dim("  Now enter YOUR wallet address (the human creator/owner).\n"));
   const creatorAddress = await promptAddress("Creator wallet address (0x...)");
   console.log(chalk.green(`  Creator: ${creatorAddress}\n`));
@@ -214,7 +214,7 @@ function showFundingPanel(address: string): void {
   const pad = (s: string, len: number) => s + " ".repeat(Math.max(0, len - s.length));
 
   console.log(chalk.cyan(`  ${"╭" + "─".repeat(w) + "╮"}`));
-  console.log(chalk.cyan(`  │${pad("  Fund your automaton", w)}│`));
+  console.log(chalk.cyan(`  │${pad("  Fund your MoneyClaw", w)}│`));
   console.log(chalk.cyan(`  │${" ".repeat(w)}│`));
   console.log(chalk.cyan(`  │${pad(`  Address: ${short}`, w)}│`));
   console.log(chalk.cyan(`  │${" ".repeat(w)}│`));
@@ -226,7 +226,7 @@ function showFundingPanel(address: string): void {
   console.log(chalk.cyan(`  │${pad("  3. Fund via Conway Cloud dashboard", w)}│`));
   console.log(chalk.cyan(`  │${pad("     https://app.conway.tech", w)}│`));
   console.log(chalk.cyan(`  │${" ".repeat(w)}│`));
-  console.log(chalk.cyan(`  │${pad("  The automaton will start now. Fund it anytime —", w)}│`));
+  console.log(chalk.cyan(`  │${pad("  MoneyClaw will start now. Fund it anytime —", w)}│`));
   console.log(chalk.cyan(`  │${pad("  the survival system handles zero-credit gracefully.", w)}│`));
   console.log(chalk.cyan(`  ${"╰" + "─".repeat(w) + "╯"}`));
   console.log("");

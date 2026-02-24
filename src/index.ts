@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Conway Automaton Runtime
+ * MoneyClaw Runtime
  *
  * The entry point for the sovereign AI agent.
  * Handles CLI args, bootstrapping, and orchestrating
@@ -41,13 +41,13 @@ async function main(): Promise<void> {
   // ─── CLI Commands ────────────────────────────────────────────
 
   if (args.includes("--version") || args.includes("-v")) {
-    logger.info(`Conway Automaton v${VERSION}`);
+    logger.info(`MoneyClaw v${VERSION}`);
     process.exit(0);
   }
 
   if (args.includes("--help") || args.includes("-h")) {
     logger.info(`
-Conway Automaton v${VERSION}
+MoneyClaw v${VERSION}
 Sovereign AI Agent Runtime
 
 Usage:
@@ -65,6 +65,8 @@ Environment:
   CONWAY_API_URL           Conway API URL (default: https://api.conway.tech)
   CONWAY_API_KEY           Conway API key (overrides config)
   OLLAMA_BASE_URL          Ollama base URL (overrides config, e.g. http://localhost:11434)
+  OPENAI_BASE_URL          OpenAI-compatible base URL (overrides config)
+  ANTHROPIC_BASE_URL       Anthropic-compatible base URL (overrides config)
 `);
     process.exit(0);
   }
@@ -130,7 +132,7 @@ Environment:
 async function showStatus(): Promise<void> {
   const config = loadConfig();
   if (!config) {
-    logger.info("Automaton is not configured. Run the setup script first.");
+    logger.info("MoneyClaw is not configured. Run the setup script first.");
     return;
   }
 
@@ -146,7 +148,7 @@ async function showStatus(): Promise<void> {
   const registry = db.getRegistryEntry();
 
   logger.info(`
-=== AUTOMATON STATUS ===
+=== MONEYCLAW STATUS ===
 Name:       ${config.name}
 Address:    ${config.walletAddress}
 Creator:    ${config.creatorAddress}
@@ -169,7 +171,7 @@ Version:    ${config.version}
 // ─── Main Run ──────────────────────────────────────────────────
 
 async function run(): Promise<void> {
-  logger.info(`[${new Date().toISOString()}] Conway Automaton v${VERSION} starting...`);
+  logger.info(`[${new Date().toISOString()}] MoneyClaw v${VERSION} starting...`);
 
   // Load config — first run triggers interactive setup wizard
   let config = loadConfig();
@@ -246,6 +248,25 @@ async function run(): Promise<void> {
 
   if (ollamaBaseUrl) {
     logger.info(`[${new Date().toISOString()}] Ollama backend: ${ollamaBaseUrl}`);
+  }
+  if (openaiBaseUrl) {
+    logger.info(`[${new Date().toISOString()}] OpenAI base URL: ${openaiBaseUrl}`);
+  }
+  if (anthropicBaseUrl) {
+    logger.info(`[${new Date().toISOString()}] Anthropic base URL: ${anthropicBaseUrl}`);
+  }
+
+  if (ollamaBaseUrl) {
+    const { discoverOllamaModels } = await import("./ollama/discover.js");
+    await discoverOllamaModels(ollamaBaseUrl, db.raw);
+  }
+  if (config.openaiApiKey) {
+    const { discoverOpenAIModels } = await import("./openai/discover.js");
+    await discoverOpenAIModels(openaiBaseUrl || "https://api.openai.com", config.openaiApiKey, db.raw);
+  }
+  if (config.anthropicApiKey) {
+    const { discoverAnthropicModels } = await import("./anthropic/discover.js");
+    await discoverAnthropicModels(anthropicBaseUrl || "https://api.anthropic.com", config.anthropicApiKey, db.raw);
   }
 
   // Create social client
@@ -371,6 +392,8 @@ async function run(): Promise<void> {
         policyEngine,
         spendTracker,
         ollamaBaseUrl,
+        openaiBaseUrl,
+        anthropicBaseUrl,
         onStateChange: (state: AgentState) => {
           logger.info(`[${new Date().toISOString()}] State: ${state}`);
         },

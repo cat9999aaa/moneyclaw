@@ -72,6 +72,8 @@ export interface AgentLoopOptions {
   onStateChange?: (state: AgentState) => void;
   onTurnComplete?: (turn: AgentTurn) => void;
   ollamaBaseUrl?: string;
+  openaiBaseUrl?: string;
+  anthropicBaseUrl?: string;
 }
 
 /**
@@ -81,7 +83,7 @@ export interface AgentLoopOptions {
 export async function runAgentLoop(
   options: AgentLoopOptions,
 ): Promise<void> {
-  const { identity, config, db, conway, inference, social, skills, policyEngine, spendTracker, onStateChange, onTurnComplete, ollamaBaseUrl } =
+  const { identity, config, db, conway, inference, social, skills, policyEngine, spendTracker, onStateChange, onTurnComplete, ollamaBaseUrl, openaiBaseUrl, anthropicBaseUrl } =
     options;
 
   const builtinTools = createBuiltinTools(identity.sandboxId);
@@ -108,6 +110,16 @@ export async function runAgentLoop(
   if (ollamaBaseUrl) {
     const { discoverOllamaModels } = await import("../ollama/discover.js");
     await discoverOllamaModels(ollamaBaseUrl, db.raw);
+  }
+
+  if (config.openaiApiKey) {
+    const { discoverOpenAIModels } = await import("../openai/discover.js");
+    await discoverOpenAIModels(openaiBaseUrl || "https://api.openai.com", config.openaiApiKey, db.raw);
+  }
+
+  if (config.anthropicApiKey) {
+    const { discoverAnthropicModels } = await import("../anthropic/discover.js");
+    await discoverAnthropicModels(anthropicBaseUrl || "https://api.anthropic.com", config.anthropicApiKey, db.raw);
   }
   const budgetTracker = new InferenceBudgetTracker(db.raw, modelStrategyConfig);
   const inferenceRouter = new InferenceRouter(db.raw, modelRegistry, budgetTracker);

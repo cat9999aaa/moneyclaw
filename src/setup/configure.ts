@@ -180,7 +180,7 @@ function printMainMenu(config: AutomatonConfig): void {
   const strategy = config.modelStrategy ?? DEFAULT_MODEL_STRATEGY_CONFIG;
 
   console.log(chalk.cyan("  ┌────────────────────────────────────────────┐"));
-  console.log(chalk.cyan("  │  Configure Automaton                        │"));
+  console.log(chalk.cyan("  │  Configure MoneyClaw                        │"));
   console.log(chalk.cyan("  └────────────────────────────────────────────┘"));
   console.log("");
   console.log(`  ${chalk.white("1.")} Inference Providers   ${dim(providers)}`);
@@ -228,6 +228,22 @@ async function configureModelStrategy(config: AutomatonConfig): Promise<void> {
     console.log(chalk.dim(`  Checking Ollama at ${ollamaBaseUrl}...`));
     const { discoverOllamaModels } = await import("../ollama/discover.js");
     await discoverOllamaModels(ollamaBaseUrl, db.raw);
+  }
+
+  const openaiApiKey = config.openaiApiKey;
+  const openaiBaseUrl = process.env.OPENAI_BASE_URL || config.openaiBaseUrl || "https://api.openai.com";
+  if (openaiApiKey) {
+    console.log(chalk.dim(`  Checking OpenAI-compatible API at ${openaiBaseUrl}...`));
+    const { discoverOpenAIModels } = await import("../openai/discover.js");
+    await discoverOpenAIModels(openaiBaseUrl, openaiApiKey, db.raw);
+  }
+
+  const anthropicApiKey = config.anthropicApiKey;
+  const anthropicBaseUrl = process.env.ANTHROPIC_BASE_URL || config.anthropicBaseUrl || "https://api.anthropic.com";
+  if (anthropicApiKey) {
+    console.log(chalk.dim(`  Checking Anthropic-compatible API at ${anthropicBaseUrl}...`));
+    const { discoverAnthropicModels } = await import("../anthropic/discover.js");
+    await discoverAnthropicModels(anthropicBaseUrl, anthropicApiKey, db.raw);
   }
 
   const models = registry.getAll().filter((m) => m.enabled);
@@ -303,7 +319,7 @@ async function configureGeneral(config: AutomatonConfig): Promise<void> {
     ["debug", "info", "warn", "error"] as const,
     config.logLevel,
   );
-  config.maxChildren = await askNumber("Max child automatons", config.maxChildren);
+  config.maxChildren = await askNumber("Max child MoneyClaws", config.maxChildren);
   config.socialRelayUrl = (await askString("Social relay URL", config.socialRelayUrl)) || undefined;
 
   console.log("");
@@ -314,7 +330,7 @@ async function configureGeneral(config: AutomatonConfig): Promise<void> {
 export async function runConfigure(): Promise<void> {
   const config = loadConfig();
   if (!config) {
-    console.log(chalk.red("  Automaton is not configured. Run: automaton --setup\n"));
+    console.log(chalk.red("  MoneyClaw is not configured. Run: automaton --setup\n"));
     return;
   }
 
@@ -356,5 +372,5 @@ export async function runConfigure(): Promise<void> {
 
   if (rl) { rl.close(); rl = null; }
   closePrompts();
-  console.log(chalk.dim("  Done. Restart the automaton to apply changes.\n"));
+  console.log(chalk.dim("  Done. Restart MoneyClaw to apply changes.\n"));
 }

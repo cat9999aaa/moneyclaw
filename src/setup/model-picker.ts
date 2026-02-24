@@ -12,6 +12,8 @@ import { loadConfig, saveConfig, resolvePath } from "../config.js";
 import { createDatabase } from "../state/database.js";
 import { ModelRegistry } from "../inference/registry.js";
 import { discoverOllamaModels } from "../ollama/discover.js";
+import { discoverOpenAIModels } from "../openai/discover.js";
+import { discoverAnthropicModels } from "../anthropic/discover.js";
 import type { ModelEntry } from "../types.js";
 import { promptOptional, closePrompts } from "./prompts.js";
 
@@ -26,7 +28,7 @@ const PROVIDER_LABEL: Record<string, string> = {
 export async function runModelPicker(): Promise<void> {
   const config = loadConfig();
   if (!config) {
-    console.log(chalk.red("  Automaton is not configured. Run: automaton --setup"));
+    console.log(chalk.red("  MoneyClaw is not configured. Run: automaton --setup"));
     return;
   }
 
@@ -41,6 +43,20 @@ export async function runModelPicker(): Promise<void> {
   if (ollamaBaseUrl) {
     console.log(chalk.dim(`  Checking Ollama at ${ollamaBaseUrl}...`));
     await discoverOllamaModels(ollamaBaseUrl, db.raw);
+  }
+
+  const openaiApiKey = config.openaiApiKey;
+  const openaiBaseUrl = process.env.OPENAI_BASE_URL || config.openaiBaseUrl || "https://api.openai.com";
+  if (openaiApiKey) {
+    console.log(chalk.dim(`  Checking OpenAI-compatible API at ${openaiBaseUrl}...`));
+    await discoverOpenAIModels(openaiBaseUrl, openaiApiKey, db.raw);
+  }
+
+  const anthropicApiKey = config.anthropicApiKey;
+  const anthropicBaseUrl = process.env.ANTHROPIC_BASE_URL || config.anthropicBaseUrl || "https://api.anthropic.com";
+  if (anthropicApiKey) {
+    console.log(chalk.dim(`  Checking Anthropic-compatible API at ${anthropicBaseUrl}...`));
+    await discoverAnthropicModels(anthropicBaseUrl, anthropicApiKey, db.raw);
   }
 
   const models = registry.getAll().filter((m) => m.enabled);
@@ -80,7 +96,7 @@ export async function runModelPicker(): Promise<void> {
   saveConfig(config);
 
   console.log(chalk.green(`\n  Active model set to: ${selected.modelId} (${selected.displayName})`));
-  console.log(chalk.dim("  Restart the automaton for the change to take effect.\n"));
+  console.log(chalk.dim("  Restart MoneyClaw for the change to take effect.\n"));
 
   db.close();
 }
